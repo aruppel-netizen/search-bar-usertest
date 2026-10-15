@@ -13,7 +13,7 @@
  *   Клик по шапке (.topbar), даже прилипшей при скролле, считается от её верха — как в начале страницы.
  */
 (function () {
-  var ENDPOINT = 'PASTE_APPS_SCRIPT_URL_HERE'; // веб-приложение Apps Script (…/exec)
+  var ENDPOINT = 'https://script.google.com/macros/s/AKfycbyB2RqPG3DoooVFQERVL9JkpzFFuKcqmgKAV96xurhjaa8HFe_FFgLkshm3Ie9Tytg5/exec'; // веб-приложение Apps Script (…/exec)
   var FRAME_W = 1440, PAGE_H = 3000;
 
   var qs = new URLSearchParams(location.search);

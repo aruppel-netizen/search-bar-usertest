@@ -983,7 +983,14 @@
       'купить квартиру у метро', 'купить квартиру с ремонтом', 'купить квартиру с балконом', 'купить квартиру в ипотеку',
       'купить квартиру от застройщика', 'купить квартиру без отделки', 'купить квартиру с парковкой', 'купить квартиру в рассрочку',
       'купить квартиру рядом с парком', 'купить квартиру с видом на реку', 'купить квартиру в монолитном доме',
-      'купить двушку', 'купить двушку у метро', 'купить однушку', 'купить однушку в новостройке', 'купить трёшку',
+      'купить двушку', 'купить двушку у метро', 'купить двушку во вторичке', 'купить двушку с ремонтом', 'купить двушку во вторичке с ремонтом',
+      'купить двушку во вторичке у метро', 'купить двушку в новостройке',
+      'купить двухкомнатную квартиру', 'купить двухкомнатную квартиру во вторичке', 'купить двухкомнатную квартиру с ремонтом',
+      'купить 2-комнатную квартиру', 'купить 2-комнатную квартиру во вторичке', 'купить 2-комнатную квартиру с ремонтом', 'купить 2-комнатную квартиру у метро',
+      'купить квартиру во вторичке с ремонтом', 'купить квартиру с евроремонтом', 'купить однушку во вторичке', 'купить однушку с ремонтом', 'купить трёшку во вторичке',
+      'двушка во вторичке', 'двушка с ремонтом', 'двушка во вторичке с ремонтом', 'двушка у метро',
+      'двухкомнатная квартира во вторичке', 'двухкомнатная квартира с ремонтом', '2-комнатная квартира во вторичке', '2-комнатная квартира с ремонтом',
+      'квартира во вторичке', 'квартира с ремонтом', 'квартира у метро', 'купить однушку', 'купить однушку в новостройке', 'купить трёшку',
       'купить студию', 'купить студию у метро', 'купить студию в новостройке',
       'купить дом', 'купить дом с участком', 'купить дом с баней', 'купить дом в подмосковье', 'купить дачу', 'купить таунхаус',
       'снять квартиру', 'снять квартиру в спб', 'снять квартиру надолго', 'снять квартиру без комиссии', 'снять квартиру у метро', 'снять квартиру с животными',
@@ -2430,13 +2437,17 @@
     // Подсказки станций метро по набранному слову
     function metroSuggest(text) {
       if (!metroData || norm(text).split(' ').pop().length < 3) return [];
-      return Object.keys(metroData.byName).filter(function (name) { return hitWord(name, text); }).slice(0, 2);
+      return Object.keys(metroData.byName).filter(function (name) { return hitWord(name, text); })
+        .sort(function (a, b) { return a.length - b.length || a.localeCompare(b); }).slice(0, 2);
     }
     // Чипсы следующего слова: «купить кв» → «квартиру»; «купить квартиру » → «в центре», «у метро»…
     var SHORT = ['в', 'во', 'с', 'у', 'без', 'на', 'для', 'от'];
     function nextChips(query) {
       if (!norm(query)) return SEARCH_CHIPS;
       var words = norm(query).split(' '), partial = /\s$/.test(query) ? '' : words.pop(), out = [];
+      // «…у метро со» → станции, начинающиеся на «со»
+      if (partial.length >= 2 && /^(метро|м\.?)$/.test(words[words.length - 1] || '') && metroData)
+        return Object.keys(metroData.byName).filter(function (n) { return norm(n).indexOf(partial) === 0; }).sort().slice(0, 6);
       SUGGESTIONS.forEach(function (s) {
         var sw = s.split(' ');
         if (sw.length <= words.length) return;
@@ -2520,6 +2531,11 @@
         rows.push({ type: 'jk', title: 'ЖК «' + j.name + '»', sub: j.address.split(', ').slice(0, 2).join(' / '), geo: { kind: 'jk', value: j.name } }); });
       SUGGEST_GEO.filter(function (g) { return hitWord(g, text); }).slice(0, 2).forEach(function (g) {
         rows.push({ type: 'geo', title: g, sub: 'Искать здесь', geo: { kind: 'address', value: g } }); });
+      var tw = text.trim().split(/\s+/);
+      if (tw.length >= 2) rows = metroSuggest(text).map(function (name) {
+        var qq = tw.slice(0, -1).concat(name).join(' ');
+        return { type: 'search', title: qq, sub: suggestRegion(qq, region), query: qq };
+      }).filter(function (r) { return !rows.some(function (x) { return x.query === r.query; }); }).concat(rows);
       metroSuggest(text).forEach(function (name) {
         rows.push({ type: 'geo', title: 'м. ' + name, sub: 'Метро', geo: { kind: 'metro', value: metroData.byName[name][0] } }); });
       CATEGORIES_SUGGEST.filter(function (c) { return matches(c.tags, text); }).slice(0, 1).forEach(function (c) {
@@ -2554,18 +2570,32 @@
       var conflict = pq.deal && p.deal && pq.deal !== p.deal ? pq.deal : null;
       var rows = snrDown ? [] : buildSuggests(text, found, p.region);
       useEffect(function () { active[1](-1); }, [text]);
+      // Юзтест: как собран запрос — напечатано руками, вставлено чипсами, удалено, вставлено из буфера
+      var comp = useRef(null);
+      function compose() { if (!comp.current) comp.current = { typed: 0, del: 0, paste: 0, chipChars: 0, chips: [], t0: Date.now() }; return comp.current; }
+      // Что человек видел: чипсы и подсказки — пишем, когда показ устоялся (700 мс)
+      var shownKey = open && !snrDown ? text + '‖' + chips.join(',') + '‖' + rows.slice(0, 6).map(function (r) { return r.type + ':' + r.title; }).join(';') : '';
+      useEffect(function () {
+        if (!shownKey) return;
+        var t = setTimeout(function () { TL.log('search_shown', shownKey); }, 700);
+        return function () { clearTimeout(t); };
+      }, [shownKey]);
       function close() { focus[1](false); var el = field(); if (el) el.blur(); }
-      function submit(t) {
+      function submit(t, how) {
         t = t.trim(); if (!t || snrDown) return;
+        var c = compose();
+        TL.log('search_compose', t + '|how:' + (how || 'enter') + '|typed:' + c.typed + '|chip_chars:' + c.chipChars + '|chips:' + c.chips.join(',') +
+          '|del:' + c.del + '|paste:' + c.paste + '|autofill:' + (c.autofill || 0) + '|sec:' + ((Date.now() - c.t0) / 1000).toFixed(1));
+        comp.current = null;
         // Запрос попадает в историю (саджест «История»)
         var at = HISTORY.indexOf(t); if (at >= 0) HISTORY.splice(at, 1); HISTORY.unshift(t);
-        q[1](t); close(); TL.log('search_submit', t); p.onSearch(t, parseQuery(t));
+        q[1](t); close(); TL.log('search_submit', t + '|' + (how || 'enter')); p.onSearch(t, parseQuery(t));
       }
       // Клик по саджесту: запрос — ищем; гео, ЖК, застройщик — добавляем в «Адрес, метро, район», поле очищаем
-      function act(r) {
-        TL.log('suggest_pick', r.type + '|' + r.title);
-        if (r.geo) { q[1](''); close(); if (p.onPickGeo) p.onPickGeo(r.geo); return; }
-        submit(r.query);
+      function act(r, how) {
+        TL.log('suggest_pick', r.type + '|' + r.title + '|pos:' + (rows.indexOf(r) + 1) + '|typed:' + text + '|' + (how || 'click'));
+        if (r.geo) { comp.current = null; q[1](''); close(); if (p.onPickGeo) p.onPickGeo(r.geo); return; }
+        submit(r.query, 'suggest');
       }
       function fill(t) {
         q[1](t); focus[1](true);
@@ -2573,11 +2603,12 @@
       }
       // Чипс заменяет недописанное слово и добавляет пробел — чипсы сразу пересчитываются
       function chip(c) {
-        TL.log('chip_pick', c);
-        if (empty) return fill(c + ' ');
-        var words = text.trim().split(/\s+/);
-        if (!/\s$/.test(text)) words.pop();
-        fill(words.concat(c).join(' ') + ' ');
+        var cp = compose(), before = text, after;
+        if (empty) after = c + ' ';
+        else { var words = text.trim().split(/\s+/); if (!/\s$/.test(text)) words.pop(); after = words.concat(c).join(' ') + ' '; }
+        cp.chips.push(c); cp.chipChars += Math.max(0, after.length - before.length);
+        TL.log('chip_pick', c + '|pos:' + (chips.indexOf(c) + 1) + '|typed:' + before);
+        fill(after);
       }
       var keep = function (e) { e.preventDefault(); };
       // Первое взаимодействие (фокус или ввод) выключает «печатную машинку» навсегда
@@ -2612,12 +2643,17 @@
             h(K.IconSearch16, { color: 'icon-main-default' }))
         : h('div', { className: 'sbox__field' },
           h(K.Input, { size: 'M', width: '100%', placeholder: intro ? typed : DEFAULT_PLACEHOLDER, value: text,
-            onChange: function (e, v) { q[1](v); focus[1](true); },
+            onChange: function (e, v) {
+              var c = compose(), d = (v || '').length - text.length, it = e && e.nativeEvent && e.nativeEvent.inputType || '';
+              // Тип ввода сообщает браузер: вставка из буфера/перетаскивание, автозамена — отдельно от набранного руками
+              if (/paste|drop/i.test(it)) c.paste += Math.max(d, 0); else if (/replacement/i.test(it)) c.autofill = (c.autofill || 0) + 1; else if (d > 0) c.typed += d; else c.del += -d;
+              q[1](v); focus[1](true);
+            },
             onFocus: function () { focus[1](true); },
             onKeyDown: function (e) {
               if (e.key === 'ArrowDown' && rows.length) { e.preventDefault(); active[1]((active[0] + 1) % rows.length); }
               if (e.key === 'ArrowUp' && rows.length) { e.preventDefault(); active[1](active[0] <= 0 ? rows.length - 1 : active[0] - 1); }
-              if (e.key === 'Enter') { if (active[0] >= 0 && rows[active[0]]) act(rows[active[0]]); else submit(text); }
+              if (e.key === 'Enter') { if (active[0] >= 0 && rows[active[0]]) act(rows[active[0]], 'keyboard'); else submit(text, 'enter'); }
               if (e.key === 'Escape') close();
             },
             // Лупа слева — в пустом поле и пока пользователь печатает; после поиска в поле только запрос и крестик
@@ -2625,9 +2661,9 @@
             // Загрузка после поиска — только скелетон выдачи, без лоадера в поле
             rightAdornment: text && h('span', { className: 'sbox__actions' },
               text && h('button', { type: 'button', className: 'sbox__clear', 'aria-label': 'Очистить', onMouseDown: keep,
-                onClick: function () { fill(''); } }, h(K.IconClose16, { color: 'icon-secondary-default' })),
+                onClick: function () { TL.log('search_clear', text); comp.current = null; fill(''); } }, h(K.IconClose16, { color: 'icon-secondary-default' })),
               // Кнопка-лупа — только пока пользователь вбивает запрос
-              text && open && h('button', { type: 'button', className: 'sbox__find', 'aria-label': 'Найти', onMouseDown: keep, onClick: function () { submit(text); } },
+              text && open && h('button', { type: 'button', className: 'sbox__find', 'aria-label': 'Найти', onMouseDown: keep, onClick: function () { submit(text, 'button'); } },
                 h(K.IconSearch16, { color: 'current_color' }))) })));
     }
 

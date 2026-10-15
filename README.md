@@ -27,13 +27,14 @@
 - Выдача фильтруется по сделке, типу, комнатам, цене, ремонту и метро; счётчики («Найдено», «Показать N» в модалках) — реальные.
 - Строка понимает ремонт («с ремонтом», «евроремонт», «без ремонта») и станции метро с окончаниями («у Сокола»); подсказки предлагают станции («м. Сокол»).
 - Клик по названию или фото открывает упрощённую страницу объявления.
+- Подсказки и чипсы следующего слова знают «двушку / 2-комнатную / двухкомнатную», «во вторичке», «с ремонтом»; после «метро» чипсы дописывают станцию по первым буквам, подсказки — весь запрос со станцией.
 - История поиска пустая, пагинации нет.
 
 ## События (Google-таблица)
 
-`app_start` (задание, размер окна) · `search_submit` (текст) · `search_apply` (что строка разобрала) · `suggest_pick` · `chip_pick` · `allfilters_open` / `allfilters_apply` · `geo_apply` · `results` (число + состояние поиска, после каждого изменения) · `listing_open` (id, способ, позиция, подходит ли под задание 1/2) · `detail_back` · `phone_show` · `chat_tap` · `fav_add` / `fav_remove` · `screen_view` · `tap` (тепловая карта) · `test_finish`.
+`app_start` (задание, размер окна) · `search_submit` (текст + чем отправлен: enter / button / suggest) · `search_apply` (что строка разобрала) · `search_compose` (как собран запрос: `typed` — символов напечатано руками, `chip_chars` и `chips` — вставлено чипсами, `del`, `paste`, `autofill`, `sec` — время набора) · `search_shown` (что человек видел: набранный текст ‖ чипсы ‖ подсказки) · `suggest_pick` (тип, текст, позиция, что было набрано, мышь/клавиатура) · `chip_pick` (чипс, позиция, что было набрано) · `search_clear` · `allfilters_open` / `allfilters_apply` · `geo_apply` · `results` (число + состояние поиска, после каждого изменения) · `listing_open` (id, способ, позиция, подходит ли под задание 1/2) · `detail_back` · `phone_show` · `chat_tap` · `fav_add` / `fav_remove` · `screen_view` · `tap` (тепловая карта) · `test_finish`.
 
-`tap`: `экран|x|y|элемент`. Экраны: `results`, `results+search`, `detail`, `allfilters`, `geo`. x — доля рамки 1440 px; y — px от верха страницы / 3000 (модалки — доля высоты окна). Элемент — канал: `search`, `search:suggest`, `filter:<кнопка>`, `modal:<кнопка>`, `title`, `photo`, `phone`…
+`tap`: `экран|x|y|элемент`. Экраны: `results`, `results+search`, `detail`, `allfilters`, `geo`. x — доля рамки 1440 px; y — px от верха страницы / 3000 (модалки — доля высоты окна). Элемент — канал: `search`, `search:chip:<чипс>`, `search:suggest:<тип>`, `search:clear`, `search:button`, `filter:<кнопка>`, `modal:<кнопка>`, `title`, `photo`, `phone`…
 
 Логгер — `data/testlog.js` (адрес Apps Script — константа `ENDPOINT`).
 

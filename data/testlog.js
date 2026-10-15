@@ -85,7 +85,11 @@
     if (!t) return '';
     var el = t.closest('[data-heat]');
     if (el) return el.getAttribute('data-heat');
-    if (t.closest('.sbox')) return t.closest('.sbox__drop, .sbox__layer') && !t.closest('input') ? 'search:suggest' : 'search';
+    if (t.closest('.sbox__chip')) return 'search:chip:' + t.closest('.sbox__chip').textContent.trim();
+    if (t.closest('.sbox__row')) return 'search:suggest:' + (t.closest('.sbox__row').getAttribute('data-type') || '');
+    if (t.closest('.sbox__clear')) return 'search:clear';
+    if (t.closest('.sbox__find')) return 'search:button';
+    if (t.closest('.sbox')) return t.closest('.sbox__drop, .sbox__layer') && !t.closest('input') ? 'search:panel' : 'search';
     var dlg = t.closest('[role="dialog"]');
     var btn = t.closest('button, [role="button"], a, label, input');
     var raw = btn ? (btn.getAttribute('aria-label') || btn.textContent || '') : (t.textContent || '');

@@ -591,6 +591,10 @@
     .det__text { margin: 0; color: var(--text-primary-default); font-size: 16px; line-height: 24px; max-width: 760px; }
     .det__side { flex: 0 0 340px; display: flex; flex-direction: column; gap: 12px; padding: 24px; border: 1px solid var(--stroke-border-neutral); border-radius: 12px; position: sticky; top: 24px; background: var(--background-elevation); }
     .det__price { font-size: 28px; line-height: 36px; font-weight: 700; color: var(--text-primary-default); }
+    .det__fav { display: flex; align-items: center; justify-content: center; gap: 8px; height: 40px; border-radius: 8px; cursor: pointer;
+      border: 1px solid var(--control-main-primary-default); background: var(--background-primary); color: var(--text-main-default); font: inherit; font-size: 16px; line-height: 24px; font-weight: 700; }
+    .det__fav:hover { background: var(--accent-main-secondary); }
+    .det__fav:focus-visible { outline: 2px solid var(--control-main-primary-default); outline-offset: 2px; }
     .det__seller { padding: 12px 0; border-top: 1px solid var(--stroke-divider-default); }
     .done { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; box-sizing: border-box; background: var(--background-secondary); }
     .done__card { max-width: 560px; width: 100%; padding: 48px 40px; border-radius: 16px; background: var(--background-primary); text-align: center; box-shadow: 0 2px 16px var(--shadow-default); }
@@ -1146,7 +1150,7 @@
         // Избранное и сравнение — справа сверху, как на проде
         h('div', { className: 'snip__controls' },
           h('button', { type: 'button', className: 'snip__ctrl', 'aria-label': fav[0] ? 'Убрать из избранного' : 'В избранное', title: 'В избранное',
-            'data-heat': 'fav', onClick: function () { fav[1](!fav[0]); TL.log(fav[0] ? 'fav_remove' : 'fav_add', l.id); } },
+            'data-heat': 'fav', onClick: function () { fav[1](!fav[0]); TL.log(fav[0] ? 'fav_remove' : 'fav_add', l.id + '|card'); } },
             fav[0] ? h(K.IconHeartOn16, { color: 'icon-negative-default' }) : h(K.IconHeartOff16, { color: 'icon-main-default' })),
           h('button', { type: 'button', className: 'snip__ctrl', 'aria-label': 'Сравнить', title: cmp[0] ? 'В сравнении' : 'Добавить к сравнению',
             onClick: function () { cmp[1](!cmp[0]); } },
@@ -1179,6 +1183,8 @@
             h('aside', { className: 'det__side' },
               h('div', { className: 'det__price' }, rub(l.price[deal]) + PRICE_UNIT[deal]),
               h('div', { className: 'det__muted' }, l.note[deal]),
+              h('button', { type: 'button', className: 'det__fav', 'data-heat': 'fav_detail', onClick: function () { p.onFav(l); } },
+                h(K.IconHeartOff16, { color: 'current_color' }), 'В избранное'),
               h('div', { className: 'det__seller' }, h('div', { className: 'snip__overline' }, c.kind), h('div', { className: 'snip__company' }, c.name)),
               h(K.Button, { size: 'M', fullWidth: true, 'data-heat': 'phone', onClick: function () { phone[1](true); TL.log('phone_show', l.id + '|detail'); } }, phone[0] ? c.phone : 'Показать телефон'),
               c.chat && h(K.Button, { size: 'M', fullWidth: true, theme: 'main_secondary', 'data-heat': 'chat', onClick: function () { TL.log('chat_tap', l.id); } }, 'Написать')))));
@@ -2987,7 +2993,12 @@
         var pos = items.indexOf(l) + 1;
         TL.log('listing_open', l.id + '|' + how + '|pos:' + pos + '|deal:' + deal[0] + '|t1:' + (matchTask(l, '1') ? 1 : 0) + '|t2:' + (matchTask(l, '2') ? 1 : 0));
         backY.current = window.scrollY; detail[1](l); TL.setPage('detail'); window.scrollTo(0, 0);
-        if (TL.task && matchTask(l, TL.task)) { TL.finish('id:' + l.id); done[1](TL.summary()); TL.setPage('finish'); }
+      }
+      // Ответ респондента: «В избранное» на странице объявления — задание завершено (любое объявление; правильность — в данных)
+      function answerListing(l) {
+        var m = 't1:' + (matchTask(l, '1') ? 1 : 0) + '|t2:' + (matchTask(l, '2') ? 1 : 0);
+        TL.log('fav_add', l.id + '|detail|deal:' + deal[0] + '|' + m);
+        if (TL.task) { TL.finish('id:' + l.id + '|' + m); done[1](TL.summary()); TL.setPage('finish'); }
       }
       function closeListing() {
         TL.log('detail_back', detail[0].id); detail[1](null); TL.setPage('results');
@@ -3013,7 +3024,7 @@
           sig: [typeKey, deal[0], query[0], JSON.stringify(geo[0]), fsig[0], preset[0].stamp].join('#'), onList: function () { view[1]('list'); } }));
 
       if (done[0]) return h('div', { className: 'page' }, h(TaskDone, { s: done[0] }));
-      if (detail[0]) return h('div', { className: 'page' }, topbar, h(ListingDetail, { data: detail[0], deal: deal[0], onBack: closeListing }));
+      if (detail[0]) return h('div', { className: 'page' }, topbar, h(ListingDetail, { data: detail[0], deal: deal[0], onBack: closeListing, onFav: answerListing }));
       return h('div', { className: 'page' },
         // Шапка + строка фильтров: при скролле вниз уезжают, при скролле вверх возвращаются и фиксируются сверху
         topbar,

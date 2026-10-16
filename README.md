@@ -8,7 +8,7 @@
 
 | Задание | Старт | Ссылка |
 | --- | --- | --- |
-| 1 | Аренда квартир, как на проде | `https://aruppel-netizen.github.io/search-bar-usertest/?type=flat-rent&deal=rent&task=1&r=pw` |
+| 1 | Покупка квартир (новостройки и вторичка) | `https://aruppel-netizen.github.io/search-bar-usertest/?type=flat&deal=sale&task=1&r=pw` |
 | 2 | Итог задания 1: покупка, вторичка, 2 комн., ремонт | `https://aruppel-netizen.github.io/search-bar-usertest/?type=secondary&deal=sale&rooms=2&repair=any&task=2&r=pw` |
 
 Без `r` прототип работает, но события не отправляет — для проверок и показа.

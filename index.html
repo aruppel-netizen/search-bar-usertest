@@ -571,6 +571,7 @@
     .seo__chip { padding: 0; background: none; }
     .seo__chips { gap: 8px 24px; }
     /* ── Юзтест: страница объявления и экран «Задание выполнено» ── */
+    .metro-ico { display: inline-flex; line-height: 0; }
     .det { display: flex; flex-direction: column; gap: 8px; }
     .det__back { color: var(--text-main-default); text-decoration: none; font-size: 16px; line-height: 24px; align-self: flex-start; }
     .det__back:hover { color: var(--text-main-hovered); }
@@ -1109,6 +1110,12 @@
             h('img', { src: src, alt: '' }), more && h('span', null, 'Ещё фото'));
         })));
     }
+    // Иконка метро цвета ветки станции (юзтест: l.metroColor из data/test-listings.js), иначе красная, как раньше
+    function MetroIcon(l) {
+      return l.metroColor
+        ? h('span', { className: 'metro-ico', style: { color: l.metroColor } }, h(K.IconMetroMsk16, { color: 'current_color' }))
+        : h(K.IconMetroMsk16, { color: 'icon-negative-default' });
+    }
     function ListingCard(p) {
       var l = p.data, deal = p.deal || 'sale', fav = useState(false), cmp = useState(false), phone = useState(false), c = l.company;
       var old = deal === 'sale' && l.old;
@@ -1130,7 +1137,7 @@
             l.jk && h('a', { href: '#', className: 'snip__jk', onClick: function (e) { e.preventDefault(); } }, l.jk.name),
             l.jk && h('div', { className: 'snip__muted' }, l.jk.deadline),
             h('div', { className: 'snip__metro' },
-              h(K.IconMetroMsk16, { color: 'icon-negative-default' }), h('span', null, l.metro),
+              MetroIcon(l), h('span', null, l.metro),
               h('span', { className: 'snip__muted' }, '· ' + l.metroTime)),
             h('div', { className: 'snip__muted' }, l.address)),
           h('div', { className: 'snip__price' },
@@ -1448,7 +1455,7 @@
           h('div', { className: 'mcard__price' }, rub(l.price[deal]) + PRICE_UNIT[deal]),
           h('div', { className: 'mcard__sub' }, subtitle(l)),
           l.jk && h('div', { className: 'mcard__jk' }, l.jk.name),
-          h('div', { className: 'snip__metro' }, h(K.IconMetroMsk16, { color: 'icon-negative-default' }), h('span', null, l.metro), h('span', { className: 'snip__muted' }, '· ' + l.metroTime)),
+          h('div', { className: 'snip__metro' }, MetroIcon(l), h('span', null, l.metro), h('span', { className: 'snip__muted' }, '· ' + l.metroTime)),
           h('div', { className: 'snip__muted mcard__addr' }, l.address),
           h(K.Button, { size: 'XS', fullWidth: true }, 'Показать телефон')));
     }
@@ -3009,7 +3016,7 @@
       var detail = useState(null), done = useState(null), backY = useRef(0);
       function matchTask(l, task) {
         var ok = deal[0] === 'sale' && l.kind === 'secondary' && roomsOf(l) === '2' && !!l.repair && l.repair !== 'Без ремонта';
-        return task === '2' ? ok && l.metro === 'Сокол' : ok;
+        return task === '2' ? ok && l.metro === 'Сокольники' : ok;
       }
       function openListing(l, how) {
         var pos = items.indexOf(l) + 1;

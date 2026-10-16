@@ -1150,7 +1150,10 @@
         // Избранное и сравнение — справа сверху, как на проде
         h('div', { className: 'snip__controls' },
           h('button', { type: 'button', className: 'snip__ctrl', 'aria-label': fav[0] ? 'Убрать из избранного' : 'В избранное', title: 'В избранное',
-            'data-heat': 'fav', onClick: function () { fav[1](!fav[0]); TL.log(fav[0] ? 'fav_remove' : 'fav_add', l.id + '|card'); } },
+            'data-heat': 'fav', onClick: function () {
+              fav[1](!fav[0]);
+              if (fav[0]) TL.log('fav_remove', l.id + '|card'); else if (p.onFav) p.onFav(l, 'card'); else TL.log('fav_add', l.id + '|card');
+            } },
             fav[0] ? h(K.IconHeartOn16, { color: 'icon-negative-default' }) : h(K.IconHeartOff16, { color: 'icon-main-default' })),
           h('button', { type: 'button', className: 'snip__ctrl', 'aria-label': 'Сравнить', title: cmp[0] ? 'В сравнении' : 'Добавить к сравнению',
             onClick: function () { cmp[1](!cmp[0]); } },
@@ -2993,12 +2996,17 @@
         var pos = items.indexOf(l) + 1;
         TL.log('listing_open', l.id + '|' + how + '|pos:' + pos + '|deal:' + deal[0] + '|t1:' + (matchTask(l, '1') ? 1 : 0) + '|t2:' + (matchTask(l, '2') ? 1 : 0));
         backY.current = window.scrollY; detail[1](l); TL.setPage('detail'); window.scrollTo(0, 0);
+        // Финиш №1: открыт подходящий сниппет
+        if (TL.task && matchTask(l, TL.task)) finishTask(l, 'open');
       }
-      // Ответ респондента: «В избранное» на странице объявления — задание завершено (любое объявление; правильность — в данных)
-      function answerListing(l) {
-        var m = 't1:' + (matchTask(l, '1') ? 1 : 0) + '|t2:' + (matchTask(l, '2') ? 1 : 0);
-        TL.log('fav_add', l.id + '|detail|deal:' + deal[0] + '|' + m);
-        if (TL.task) { TL.finish('id:' + l.id + '|' + m); done[1](TL.summary()); TL.setPage('finish'); }
+      function marks(l) { return 't1:' + (matchTask(l, '1') ? 1 : 0) + '|t2:' + (matchTask(l, '2') ? 1 : 0); }
+      // Финиш №2: «В избранное» на любом объявлении — ответ респондента (правильность — в данных)
+      function answerListing(l, where) {
+        TL.log('fav_add', l.id + '|' + where + '|deal:' + deal[0] + '|' + marks(l));
+        if (TL.task) finishTask(l, 'fav_' + where);
+      }
+      function finishTask(l, how) {
+        TL.finish('id:' + l.id + '|by:' + how + '|' + marks(l)); done[1](TL.summary()); TL.setPage('finish');
       }
       function closeListing() {
         TL.log('detail_back', detail[0].id); detail[1](null); TL.setPage('results');
@@ -3024,7 +3032,7 @@
           sig: [typeKey, deal[0], query[0], JSON.stringify(geo[0]), fsig[0], preset[0].stamp].join('#'), onList: function () { view[1]('list'); } }));
 
       if (done[0]) return h('div', { className: 'page' }, h(TaskDone, { s: done[0] }));
-      if (detail[0]) return h('div', { className: 'page' }, topbar, h(ListingDetail, { data: detail[0], deal: deal[0], onBack: closeListing, onFav: answerListing }));
+      if (detail[0]) return h('div', { className: 'page' }, topbar, h(ListingDetail, { data: detail[0], deal: deal[0], onBack: closeListing, onFav: function (l) { answerListing(l, 'detail'); } }));
       return h('div', { className: 'page' },
         // Шапка + строка фильтров: при скролле вниз уезжают, при скролле вверх возвращаются и фиксируются сверху
         topbar,
@@ -3037,7 +3045,7 @@
             : empty ? h(EmptyResults, { query: query[0], f: fstate[0], geo: geo[0], items: items, deal: deal[0], onRemove: removeEmptyTag, onReset: resetEmpty })
             : h('div', { className: 'results__list' },
                 items.map(function (l, i) {
-                  return h(React.Fragment, { key: l.id }, h(ListingCard, { data: l, deal: deal[0], onOpen: openListing }), i === 2 && h(GptBanner));
+                  return h(React.Fragment, { key: l.id }, h(ListingCard, { data: l, deal: deal[0], onOpen: openListing, onFav: answerListing }), i === 2 && h(GptBanner));
                 })),
           // юзтест: все результаты на одной странице, пагинации нет
           null),

@@ -1259,7 +1259,7 @@
     }
     // Точка входа на карту — как в листинге ЖК (cian.ru/novostroyki): карточка 270×112 с картой, по центру «На карте»
     function MapEntry(p) {
-      return h('button', { type: 'button', className: 'map-entry', onClick: p.onClick, 'aria-label': 'Смотреть на карте' },
+      return h('button', { type: 'button', className: 'map-entry', 'data-heat': 'map_entry', onClick: p.onClick, 'aria-label': 'Смотреть на карте' },
         h('span', { className: 'map-entry__btn' }, h(K.IconMap16, { color: 'icon-main-default' }), 'На карте'));
     }
     function ResultsHead(p) {
@@ -2933,8 +2933,14 @@
       var sort = useState('default'), loading = useState(true), page = useState(1);
       var fstate = useState({ sig: '', rooms: [], price: {} }), fsig = [fstate[0].sig];  // быстрые фильтры (комнатность, цена, категории, «Все фильтры»)
       // Вид: выдача списком или карта (?view=map); точка входа на карту — карточка в шапке выдачи
-      var view = useState(params.get('view') === 'map' ? 'map' : 'list');
-      function openMap() { view[1]('map'); window.scrollTo(0, 0); }
+      // Юзтест: карта выключена — меряем только желание туда перейти (клик по «На карте»)
+      var view = useState('list');
+      var mapTaps = useRef(0);
+      function openMap() {
+        mapTaps.current += 1;
+        TL.log('map_tap', 'n:' + mapTaps.current + '|deal:' + deal[0] + '|results:' + items.length + '|' + (detail[0] ? 'detail' : 'results'));
+        if (toast) toast.open({ type: 'info', text: 'Карта недоступна в этом тесте — продолжайте поиск в списке' });
+      }
       // Липкая шапка: 'top' — в начале страницы, 'hidden' — скроллим вниз, 'pinned' — скроллим вверх (шапка с фильтрами видна)
       var bar = useState('top'), barRef = useRef(null);
       useEffect(function () {

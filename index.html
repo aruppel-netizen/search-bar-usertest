@@ -596,6 +596,13 @@
     .det__fav:hover { background: var(--accent-main-secondary); }
     .det__fav:focus-visible { outline: 2px solid var(--control-main-primary-default); outline-offset: 2px; }
     .det__seller { padding: 12px 0; border-top: 1px solid var(--stroke-divider-default); }
+    .giveup { position: fixed; left: 24px; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); z-index: 60; display: flex; align-items: center; gap: 8px;
+      padding: 8px; border-radius: 12px; background: var(--background-elevation); box-shadow: 0 2px 12px var(--shadow-default); border: 1px solid var(--stroke-border-neutral); }
+    .giveup button { font: inherit; font-size: 14px; line-height: 20px; height: 36px; padding: 0 16px; border-radius: 8px; cursor: pointer; border: 1px solid transparent; }
+    .giveup__btn, .giveup__no { background: var(--background-primary); color: var(--text-primary-default); border-color: var(--stroke-border-neutral) !important; }
+    .giveup__yes { background: var(--control-main-primary-default); color: var(--text-inverted-default); }
+    .giveup__q { padding: 0 4px 0 8px; font-size: 14px; line-height: 20px; color: var(--text-primary-default); font-weight: 600; }
+    .giveup button:focus-visible { outline: 2px solid var(--control-main-primary-default); outline-offset: 2px; }
     .done { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; box-sizing: border-box; background: var(--background-secondary); }
     .done__card { max-width: 560px; width: 100%; padding: 48px 40px; border-radius: 16px; background: var(--background-primary); text-align: center; box-shadow: 0 2px 16px var(--shadow-default); }
     .done__icon { width: 64px; height: 64px; margin: 0 auto 16px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 32px; color: var(--text-inverted-default); background: var(--control-main-primary-default); }
@@ -1192,13 +1199,25 @@
               h(K.Button, { size: 'M', fullWidth: true, 'data-heat': 'phone', onClick: function () { phone[1](true); TL.log('phone_show', l.id + '|detail'); } }, phone[0] ? c.phone : 'Показать телефон'),
               c.chat && h(K.Button, { size: 'M', fullWidth: true, theme: 'main_secondary', 'data-heat': 'chat', onClick: function () { TL.log('chat_tap', l.id); } }, 'Написать')))));
     }
+    // ── Юзтест: «Не смог найти» — внизу слева, с подтверждением, чтобы не нажать случайно ──
+    function GiveUp(p) {
+      var ask = useState(false);
+      useEffect(function () { if (ask[0]) TL.log('give_up_ask'); }, [ask[0]]);
+      return h('div', { className: 'giveup', 'data-heat': 'give_up' },
+        ask[0]
+          ? h(React.Fragment, null,
+              h('span', { className: 'giveup__q' }, 'Завершить задание без ответа?'),
+              h('button', { type: 'button', className: 'giveup__yes', onClick: p.onConfirm }, 'Да, не нашёл'),
+              h('button', { type: 'button', className: 'giveup__no', onClick: function () { TL.log('give_up_cancel'); ask[1](false); } }, 'Продолжить поиск'))
+          : h('button', { type: 'button', className: 'giveup__btn', onClick: function () { ask[1](true); } }, 'Не смог найти'));
+    }
     // ── Юзтест: экран «Задание выполнено» (метрики попадают в запись экрана Пасвея) ──
     function TaskDone(p) {
       var s = p.s, c = s.counts;
       return h('div', { className: 'done' },
         h('div', { className: 'done__card' },
           h('div', { className: 'done__icon' }, '✓'),
-          h('h1', null, 'Задание ' + s.task + ' выполнено'),
+          h('h1', null, 'Задание ' + s.task + (s.gaveUp ? ' завершено' : ' выполнено')),
           h('p', null, 'Спасибо! Вернитесь во вкладку с тестом и ответьте на вопросы.'),
           h('div', { className: 'done__meta' },
             'время ' + s.duration + ' · поисков ' + ((c.search_submit || 0) + (c.allfilters_apply || 0)) + ' · открыто объявлений ' + (c.listing_open || 0) + ' · ' + s.group + ' · ' + s.sessionId)));
@@ -3005,6 +3024,12 @@
         TL.log('fav_add', l.id + '|' + where + '|deal:' + deal[0] + '|' + marks(l));
         if (TL.task) finishTask(l, 'fav_' + where);
       }
+      // «Не смог найти»: респондент завершает задание без ответа
+      function giveUp() {
+        TL.log('give_up', (detail[0] ? 'detail:' + detail[0].id : 'results') + '|deal:' + deal[0] + '|' + stateKey);
+        TL.finish('by:give_up'); done[1](Object.assign(TL.summary(), { gaveUp: true })); TL.setPage('finish');
+      }
+      var giveUpBtn = TL.task ? h(GiveUp, { onConfirm: giveUp }) : null;
       function finishTask(l, how) {
         TL.finish('id:' + l.id + '|by:' + how + '|' + marks(l)); done[1](TL.summary()); TL.setPage('finish');
       }
@@ -3032,8 +3057,8 @@
           sig: [typeKey, deal[0], query[0], JSON.stringify(geo[0]), fsig[0], preset[0].stamp].join('#'), onList: function () { view[1]('list'); } }));
 
       if (done[0]) return h('div', { className: 'page' }, h(TaskDone, { s: done[0] }));
-      if (detail[0]) return h('div', { className: 'page' }, topbar, h(ListingDetail, { data: detail[0], deal: deal[0], onBack: closeListing, onFav: function (l) { answerListing(l, 'detail'); } }));
-      return h('div', { className: 'page' },
+      if (detail[0]) return h('div', { className: 'page' }, topbar, h(ListingDetail, { data: detail[0], deal: deal[0], onBack: closeListing, onFav: function (l) { answerListing(l, 'detail'); } }), giveUpBtn);
+      return h('div', { className: 'page' }, giveUpBtn,
         // Шапка + строка фильтров: при скролле вниз уезжают, при скролле вверх возвращаются и фиксируются сверху
         topbar,
         h('div', { className: 'results' },

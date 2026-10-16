@@ -20,6 +20,28 @@
     if (l.repair) l.badges = [{ text: REPAIR_BADGE[l.repair], tone: null, icon: null }].concat(l.badges.filter(function (b) { return !/ремонт/i.test(b.text); }));
   });
 
+  // Реалистичные цены для Москвы (330–420 тыс. ₽/м²): на проде в снимке были объекты за 65–280 млн — в тесте они отвлекают
+  var PRICES = {
+    1: { price: 33900000 },
+    2: { price: 35500000 },
+    3: { price: 19690000, old: 21640000 },
+    4: { price: 25840000 },
+    7: { price: 26200000, sub: '2-комн. квартира, 62,4 м², 3/8 этаж', text: [/114 м2/g, '62,4 м2'] },
+    8: { price: 29600000, sub: '3-комн. квартира, 84,6 м², 8/8 этаж', title: 'Трёшка с собственной террасой' },
+    9: { price: 23900000 },
+    10: { price: 23880000 }
+  };
+  window.PROD_LISTINGS.forEach(function (l) {
+    var o = PRICES[l.id]; if (!o) return;
+    l.price = o.price;
+    if (o.sub) l.sub = o.sub;
+    if (o.title) l.title = o.title;
+    if (o.text) l.text = l.text.replace(o.text[0], o.text[1]);
+    if (l.old || o.old) { l.old = o.old || null; l.discount = l.old ? '-' + Math.round((1 - l.price / l.old) * 100) + '%' : null; }
+    var m = /([\d,]+) м²/.exec(l.sub);
+    if (m) l.perM2 = Math.round(l.price / parseFloat(m[1].replace(',', '.'))).toLocaleString('ru-RU') + ' ₽/м²';
+  });
+
   function seller(kind, name, phone, logo, extra) {
     return Object.assign({ kind: kind, name: name, phone: phone, logo: logo, superagent: false, verified: true, experience: null, all: true, chat: true }, extra || {});
   }
@@ -88,7 +110,7 @@
       date: '3 дня назад', dateFull: '12 окт, 14:55',
       photos: ['./assets/prod/c1-1.jpg', './assets/prod/c5-3.jpg', './assets/prod/c10-1.jpg', './assets/prod/c8-2.jpg'], lat: 55.7897, lng: 37.5585 }),
     flat({ id: 20, kind: 'newbuilding', repair: null, title: 'Квартира в новом квартале у Сокола', label: 'Первичная продажа',
-      sub: '2-комн. квартира, 61,4 м², 12/24 этаж', area: 61.4, price: 32700000,
+      sub: '2-комн. квартира, 61,4 м², 12/24 этаж', area: 61.4, price: 24560000,
       badges: [{ text: 'С отделкой', tone: null, icon: null }, { text: 'Ипотека 6%', tone: 'promo', icon: null }],
       jk: { name: 'ЖК «Сокол Парк»', deadline: 'сдача ГК: 2 кв. 2027 года' },
       metro: 'Сокол', metroTime: '14 минут пешком', address: 'Москва, САО, р-н Сокол, м. Сокол, улица Панфилова, 4',
